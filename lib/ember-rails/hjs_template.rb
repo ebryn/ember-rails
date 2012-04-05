@@ -3,6 +3,19 @@ require "execjs"
 
 module EmberRails
 
+  # config.ember_rails.template_root = "templates"
+  if defined?(::Rails::Application::Configuration)
+    ::Rails::Application::Configuration.module_eval do
+      def ember_rails
+        EmberRails
+      end
+    end
+  end
+
+  class <<self
+    attr_accessor :template_root
+  end
+
   # = Sprockets engine for HandlebarsJS templates
   class HjsTemplate < Tilt::Template
 
@@ -24,11 +37,15 @@ module EmberRails
       if scope.pathname.to_s =~ /\.mustache\.(handlebars|hjs)/
         t = t.gsub(/\{\{(\w[^\}\}]+)\}\}/){ |x| "{{unbound #{$1}}}" }
       end
-      
+
+      template_name = scope.logical_path
+      if EmberRails.template_root
+        template_name = template_name.sub(EmberRails.template_root, '').sub(/^\//, '')
+      end
       if scope.pathname.to_s =~ /\.raw\.(handlebars|hjs)/
-        "Ember.TEMPLATES[\"#{scope.logical_path}\"] = Handlebars.template(#{precompile_plain t});\n"        
+        "Ember.TEMPLATES[\"#{template_name}\"] = Handlebars.template(#{precompile_plain t});\n"
       else
-        "Ember.TEMPLATES[\"#{scope.logical_path}\"] = Handlebars.template(#{precompile t});\n"
+        "Ember.TEMPLATES[\"#{template_name}\"] = Handlebars.template(#{precompile t});\n"
       end
     end
 
@@ -37,7 +54,7 @@ module EmberRails
       def precompile_plain(template)
         runtime.call("Handlebars.precompile", template)
       end
-      
+
       def precompile(template)
         runtime.call("EmberRails.precompile", template)
       end
