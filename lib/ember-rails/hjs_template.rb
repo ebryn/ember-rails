@@ -24,11 +24,20 @@ module EmberRails
       if scope.pathname.to_s =~ /\.mustache\.(handlebars|hjs)/
         t = t.gsub(/\{\{(\w[^\}\}]+)\}\}/){ |x| "{{unbound #{$1}}}" }
       end
-      "Ember.TEMPLATES[\"#{scope.logical_path}\"] = Handlebars.template(#{precompile t});\n"
+      
+      if scope.pathname.to_s =~ /\.raw\.(handlebars|hjs)/
+        "Ember.TEMPLATES[\"#{scope.logical_path}\"] = Handlebars.template(#{precompile_plain t});\n"        
+      else
+        "Ember.TEMPLATES[\"#{scope.logical_path}\"] = Handlebars.template(#{precompile t});\n"
+      end
     end
 
     private
 
+      def precompile_plain(template)
+        runtime.call("Handlebars.precompile", template)
+      end
+      
       def precompile(template)
         runtime.call("EmberRails.precompile", template)
       end
